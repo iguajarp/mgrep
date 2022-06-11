@@ -39,16 +39,16 @@ func main() {
 
 	var workersWg sync.WaitGroup
 
-	wl := worklist.New(100)
+	wl := worklist.New(100) // Make a channel that contains entries(paths), of a buffer size 100
 
-	results := make(chan worker.Result, 100)
+	results := make(chan worker.Result, 20) // make a channel of 20: Line string, LineNum int, Path string
 
-	numWorkers := 10
+	numWorkers := 20
 	workersWg.Add(1)
 	go func() {
-		defer workersWg.Done()
-		discoverDirs(&wl, args.SearchDir)
-		wl.Finalize(numWorkers)
+		defer workersWg.Done()            // if no paths are left, and the process stopped, it will mark it done
+		discoverDirs(&wl, args.SearchDir) // add all paths on a given directory (second args)
+		wl.Finalize(numWorkers)           // add 20 empty paths to the wl (chan of paths)
 	}()
 
 	for i := 0; i < numWorkers; i++ {
@@ -56,7 +56,7 @@ func main() {
 		go func() {
 			defer workersWg.Done()
 			for {
-				workEntry := wl.Next()
+				workEntry := wl.Next() // returns a job from the channel
 				if workEntry.Path != "" {
 					workerResult := worker.FindInFile(workEntry.Path, args.SearchTerm)
 					if workerResult != nil {
